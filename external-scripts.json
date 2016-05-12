@@ -1,10 +1,6 @@
 [
   "hubot-help",
   "hubot-heroku-keepalive",
-  "hubot-maps",
-  "hubot-redis-brain",
-  "hubot-rules",
-  "hubot-shipit",
 
   "hubot-jira-bot"
 ]
