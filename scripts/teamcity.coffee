@@ -11,19 +11,14 @@
 #   HUBOT_TEAMCITY_SCHEME = <http || https> defaults to http if not set.
 #
 # Commands:
-#   hubot tc list projects - Show all available projects
-#   hubot tc list buildTypes - Show all available build types
-#   hubot tc list buildTypes of <project> - Show all available build types for the specified project
-#   hubot tc list builds <buildType> <number> - Show the status of the last <number> builds.  Number defaults to five.
-#   hubot tc list builds of <buildType> of <project> <number>- Show the status of the last <number> builds of the specified build type of the specified project. Number can only follow the last variable, so if project is not passed, number must follow buildType directly. <number> Defaults to 5
-#   hubot tc build start <buildType> - Adds a build to the queue for the specified build type
-#   hubot tc build start <buildType> of <project> - Adds a build to the queue for the specified build type of the specified project
-#   hubot tc build stop all <buildType> id <buildId> of <project> - Stops all currently running builds of a given buildType. Project parameter is optional. Please note that the special 'all' keyword will kill all currently running builds ignoring all further parameters. hubot tc build stop all all
+#   hubot tc help - Show extended help for the TeamCity script
 #
 # Author:
 #   Micah Martin and Jens Jahnke
-#Contributor:
+#
+# Contributor:
 #   Abraham Polishchuk
+#   Andreas Maechler
 
 util           = require 'util'
 _              = require 'underscore'
@@ -61,7 +56,6 @@ module.exports = (robot) ->
       .get() (err, res, body) ->
         err = body unless res.statusCode == 200
         callback err, body, msg
-
 
   getProjects = (msg, callback) ->
     url = "#{base_url}/httpAuth/app/rest/projects"
@@ -185,6 +179,45 @@ module.exports = (robot) ->
           else
             msg.send "Dropped a build in the queue for #{buildName}. Run `tc list builds of #{buildName}` to check the status"
 
+  robot.respond /tc build stop all (.*)/i, (msg) ->
+    getCurrentBuilds msg, (err, builds, msg) ->
+      if typeof(builds)=='string'
+        builds=JSON.parse(builds)
+      if builds['count']==0
+        msg.send "No builds are currently running"
+        return
+
+      configuration = buildName = msg.match[1]
+      project = null
+      id = null
+      buildTypeRE = /(.*) if (.*) of (.*)/i
+      buildTypeMatches = buildName.match buildTypeRE
+      if buildTypeMatches?
+        configuration = buildTypeMatches[1]
+        id = buildTypeMatches[2]
+        project = buildTypeMatches[3]
+
+      else
+        buildTypeRE = /(.*) of (.*)/i
+        buildTypeMatches = buildName.match buildTypeRE
+        if buildTypeMatches?
+          configuration = buildTypeMatches[1]
+          project = buildTypeMatches[2]
+
+        else
+          buildTypeRE = /(.*) id (.*)/
+          buildTypeMatches = buildName.match buildTypeRE
+          if buildTypeMatches?
+            configuration = buildTypeMatches[1]
+            id = buildTypeMatches[2]
+          else
+            buildTypeRE= /(.*)/
+            buildTypeMatches = buildName.match buildTypeRE
+            if buildTypeMatches?
+              configuration = buildTypeMatches[1]
+
+      mapAndKillBuilds(msg, configuration, id, project)
+
   robot.respond /tc list (projects|buildTypes|builds) ?(.*)?/i, (msg) ->
     type = msg.match[1]
 
@@ -261,41 +294,15 @@ module.exports = (robot) ->
             return
           createAndPublishBuildMap(builds, msg)
 
-  robot.respond /tc build stop all (.*)/i, (msg) ->
-    getCurrentBuilds msg, (err, builds, msg) ->
-      if typeof(builds)=='string'
-        builds=JSON.parse(builds)
-      if builds['count']==0
-        msg.send "No builds are currently running"
-        return
+  robot.respond /tc help/i, (msg) ->
+    msg.reply """
+    *PBot TeamCity Help*
 
-      configuration = buildName = msg.match[1]
-      project = null
-      id = null
-      buildTypeRE = /(.*) if (.*) of (.*)/i
-      buildTypeMatches = buildName.match buildTypeRE
-      if buildTypeMatches?
-        configuration = buildTypeMatches[1]
-        id = buildTypeMatches[2]
-        project = buildTypeMatches[3]
-
-      else
-        buildTypeRE = /(.*) of (.*)/i
-        buildTypeMatches = buildName.match buildTypeRE
-        if buildTypeMatches?
-          configuration = buildTypeMatches[1]
-          project = buildTypeMatches[2]
-
-        else
-          buildTypeRE = /(.*) id (.*)/
-          buildTypeMatches = buildName.match buildTypeRE
-          if buildTypeMatches?
-            configuration = buildTypeMatches[1]
-            id = buildTypeMatches[2]
-          else
-            buildTypeRE= /(.*)/
-            buildTypeMatches = buildName.match buildTypeRE
-            if buildTypeMatches?
-              configuration = buildTypeMatches[1]
-
-      mapAndKillBuilds(msg, configuration, id, project)
+    - `tc list buildTypes` - Show all available build types
+    - `tc list buildTypes of <project>` - Show all available build types for the specified project
+    - `tc list builds <buildType> <number> - Show the status of the last <number> builds.  Number defaults to five.
+    - `tc list builds of <buildType> of <project> <number>` - Show the status of the last <number> builds of the specified build type of the specified project. Number can only follow the last variable, so if project is not passed, number must follow buildType directly. <number> Defaults to 5
+    - `tc build start <buildType>` - Adds a build to the queue for the specified build type
+    - `tc build start <buildType> of <project>` - Adds a build to the queue for the specified build type of the specified project
+    - `tc build stop all <buildType> id <buildId> of <project>` - Stops all currently running builds of a given buildType. Project parameter is optional. Please note that the special 'all' keyword will kill all currently running builds ignoring all further parameters. hubot tc build stop all all
+    """

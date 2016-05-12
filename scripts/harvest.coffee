@@ -9,14 +9,7 @@
 #   HUBOT_HARVEST_SUBDOMAIN
 #
 # Commands:
-#   hubot harvest account delete - Make hubot forget your Harvest credentials again
-#   hubot harvest account save <email> <password> - Make hubot remember your Harvest credentials
-#   hubot harvest daily [of <user>] [at yyyy-mm-dd] - Show a user's Harvest timers for today (or yours, if noone is specified) or a specific day
-#   hubot harvest list [tasks of <user>] - Show the Harvest project-task combinations available to a user (or you, if noone is specified)
-#   hubot harvest start - Restart the last timer.
-#   hubot harvest start at <project>/<task>: <notes> - Start a Harvest timer at a given project-task combination
-#   hubot harvest status - Check if the Harvest API is reachable.
-#   hubot harvest stop [at project/task] - Stop the most recent Harvest timer or the one for the given project-task combination.
+#   hubot harvest help - Show extended help for the harvest script
 #
 # Notes:
 #   All commands and command arguments are case-insenitive. If you work
@@ -71,7 +64,11 @@
 #
 # Author:
 #   Quintus @ Asquera
+
+# Contributor:
+#   Andreas Maechler
 #
+
 http = require("http")
 
 unless process.env.HUBOT_HARVEST_SUBDOMAIN
@@ -290,6 +287,21 @@ module.exports = (robot) ->
             msg.reply "Failed to stop timer: request failed with status #{status}."
       catch error
         msg.reply("Failed to stop timer: fatal error: #{error}")
+
+  # Show a helpful response
+  robot.respond /harvest help/i, (msg) ->
+    msg.send """
+    *PBot Harvest Help*
+
+    - `harvest account save <email> <password>` Make hubot remember your Harvest credentials
+    - `harvest daily [of <user>] [at yyyy-mm-dd]` Show a user's Harvest timers for today (or yours, if noone is specified) or a specific day
+    - `harvest list [tasks of <user>]` Show the Harvest project-task combinations available to a user (or you, if noone is specified)
+    - `harvest start` Restart the last timer.
+    - `harvest start at <project>/<task>: <notes>` Start a Harvest timer at a given project-task combination
+    - `harvest status` Check if the Harvest API is reachable.
+    - `hubot harvest stop [at project/task]` Stop the most recent Harvest timer or the one for the given project-task combination.
+    """
+
 
 # Class encapsulating a user's Harvest credentials; safe to store
 # in Hubot's Redis brain (no methods, this is a data-only construct).
